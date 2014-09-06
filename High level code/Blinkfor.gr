@@ -1,0 +1,91 @@
+extern void setUartCallback(char[], function (char) -> void);
+extern void uartTransmit(char, char[]);
+extern void toggleLed();
+
+Blinker blinker;
+
+class Blinker
+{
+    long blinksLeft;
+    bool isblinking;
+
+    void init()
+    {
+        blinksLeft = 0l;
+        isblinking = false;
+        return;
+    }
+
+    void blinkFor(long times)
+    {
+        if(isblinking == false)
+        {
+            isblinking = true;
+            blinksLeft = times*2l;
+            blinkOnce();
+        }
+        return;
+    }
+
+    void blinkOnce()
+    {
+        if(blinksLeft > 0l)
+        {
+            toggleLed();
+            blinksLeft = blinksLeft - 1l;
+            after 250l msec before 5l msec blinkOnce();
+        }
+        else
+            isblinking = false;
+        return;
+    }
+}
+
+object Main
+{
+    char[30] msgBuf;
+    void main()
+    {
+        setUartCallback(msgBuf, Main.handleMessage);
+        blinker.init();
+        return;
+    }
+    
+    long pow10(char n)
+    {
+        if(n == 0c)
+            return 1l;
+        return (10l)*pow10(n-1c);
+    }
+
+    char itoa(char n)
+    {
+        return (char) (n - 48c);
+    }
+
+    long parseNum(char length, char[] msg)
+    {
+        long sum;
+        int index;
+        char pow;
+        index = 0i;
+        sum = 0l;
+        pow = length - 1c;
+        while(pow >= 0c)
+        {
+            sum = sum + pow10(pow)*(long) itoa(msg[index]);
+            index = index + 1i;
+            pow = pow - 1c;
+        }
+        return sum;
+    }
+
+    void handleMessage(char length)
+    {
+        long l;
+        l = parseNum(length, msgBuf);
+        uartTransmit(5c, "Ok!");
+        blinker.blinkFor(l);
+        return;
+    }
+}
