@@ -1,0 +1,229 @@
+extern void setUartCallback(char[], function (char) -> void);
+extern void uartTransmit(char, char[]);
+
+object Random
+{
+    long X;
+
+    void seed(long y)
+    {
+        X = y;
+        return;
+    }
+
+    long getNext()
+    {
+        X = (2147483629l*X + 2147483587l) & 2147483647l;
+        return X;
+    }
+}
+
+object Player
+{
+    char direction;
+    char[2] headPos;
+    char[2] tailPos;
+    char[10] test;
+
+    void init(char x, char y, char dir)
+    {
+        direction = dir;
+        headPos[0i] = x;
+        tailPos[0i] = x;
+        headPos[1i] = y;
+        tailPos[1i] = y;
+
+        return;
+    }
+
+    void setDirection(char dir)
+    {
+        if(direction - dir == 2c || direction - dir == -2c)
+            return;
+        direction = dir;
+        return;
+    }
+
+    bool withinBounds(char x, char y)
+    {
+        return x >= 0c && x < 20c && y >= 0c && y < 20c;
+    }
+
+    bool move()
+    {
+        char tile;
+        char taildir;
+        Board.setTile(headPos[0i], headPos[1i], direction*10c + 1c);
+        if(direction == 0c)
+            headPos[0i] = headPos[0i] + 1c;
+        else if(direction == 1c)
+            headPos[1i] = headPos[1i] - 1c;
+        else if(direction == 2c)
+            headPos[0i] = headPos[0i] - 1c;
+        else
+            headPos[1i] = headPos[1i] + 1c;
+        tile = Board.getTile(headPos[0i], headPos[1i]);
+
+        if(tile != 0c && tile != 105c || !withinBounds(headPos[0i], headPos[1i]))
+            return false;
+        if(tile != 105c)
+        {
+            taildir = Board.getTile(tailPos[0i], tailPos[1i]) / 10c;
+            Board.setTile(tailPos[0i], tailPos[1i], 0c);
+            if(taildir == 0c)
+                tailPos[0i] = tailPos[0i] + 1c;
+            else if(taildir == 1c)
+                tailPos[1i] = tailPos[1i] - 1c;
+            else if(taildir == 2c)
+                tailPos[0i] = tailPos[0i] - 1c;
+            else
+                tailPos[1i] = tailPos[1i] + 1c;
+        }
+        Board.setTile(headPos[0i], headPos[1i], 1c);
+        return true;
+    }
+}
+
+object Board
+{
+    char[400] board;
+    char[100] updates;
+    int updPos;
+
+    void init()
+    {
+        int i;
+        i = 0i;
+        while(i < 400i)
+        {
+            board[i] = 0c;
+            i = i + 1i;
+        }
+        updates[0i] = 1c;
+        updPos = 1i;
+        return;
+    }
+
+    char getTile(char x, char y)
+    {
+        return board[(int) (y*20c + x)];
+    }
+
+    void setTile(char x, char y, char color)
+    {
+        board[(int) (y*20c + x)] = color;
+        updates[updPos] = x;
+        updates[updPos + 1i] = y;
+        updates[updPos + 2i] = color;
+        updPos = updPos + 3i;
+        return;
+    }
+
+    void clear()
+    {
+        int i;
+        i = 0i;
+        while(i < 400i)
+        {
+            board[i] = 0c;
+            i = i + 1i;
+        }
+        updPos = 2i;
+        updates[0i] = 2c;
+        updates[1i] = 3c;
+        return;
+    }
+
+    void update()
+    {
+        uartTransmit((char) updPos, updates);
+        //uartTransmit(3c, test);
+        updPos = 1i;
+        return;
+    }
+}
+
+object Game
+{
+    long speed;
+    bool running;
+    char[20] input;
+    int foodcount;
+
+    void handleInput(char length)
+    {
+        if(length > 1c)
+            return;
+        Player.setDirection(input[0i]);
+        return;
+    }
+
+    void setup()
+    {
+        setUartCallback(input, Game.handleInput);
+        running = true;
+        Board.init();
+        Player.init(3c, 3c, 0c);
+        foodcount = 0i;
+        speed = 250l;
+        return;
+    }
+
+    void spawnFood()
+    {
+        char posX;
+        char posY;
+
+        if(foodcount != 0i)
+        {
+            foodcount = foodcount - 1i;
+            return;
+        }
+        foodcount = 10i;// + (int) (Random.getNext() % 8l);
+        posX = (char) (Random.getNext() % 20l);
+        posY = (char) (Random.getNext() % 20l);
+
+        // good candidate for do .. while
+        while(Board.getTile(posX, posY) != 0c)
+        {
+            posX = (char) (Random.getNext() % 20l);
+            posY = (char) (Random.getNext() % 20l);
+        }
+        Board.setTile(posX, posY, 105c);
+        return;
+    }    
+
+    void tick()
+    {
+        spawnFood();
+        if(!Player.move())
+        {
+            finish();
+            return;
+        }
+        after speed msec tick();
+        Board.update();
+        speed = speed - 1l;
+        return;
+    }
+
+    void finish()
+    {
+        Board.clear();
+        Board.update();
+        uartTransmit(8c, "YOU LOSE");
+        running = false;
+        return;
+    }
+}
+
+object Main
+{
+    void main()
+    {
+        Random.seed(0l);
+        Game.setup();
+        after 2l sec Game.tick();
+        return;
+    }
+}
