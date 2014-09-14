@@ -35,6 +35,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.ProgressMonitor;
+import javax.swing.SwingUtilities;
 
 import jssc.SerialPortException;
 
@@ -44,6 +45,8 @@ public class Gui extends JFrame  {
     private Communicator communicator;
     
     ProgressMonitor progressMonitor;
+    
+    BoardPanel boardPanel;
 
     /**
      * 
@@ -54,6 +57,11 @@ public class Gui extends JFrame  {
     
     int[] board = new int[WIDTH*WIDTH];
     
+    private void setTile(int x, int y, int col)
+    {
+        board[y*WIDTH + x] = col;
+    }
+    
     private int getTile(int x, int y)
     {
         return board[y*WIDTH + x];
@@ -61,7 +69,38 @@ public class Gui extends JFrame  {
     
     void handleInput(char key)
     {
-        
+        char dir = 0;
+        switch(key)
+        {
+        case 'f':
+            dir = 0;
+            break;
+        case 'e':
+            dir = 1;
+            break;
+        case 's':
+            dir = 2;
+            break;
+        case 'd':
+            dir = 3;
+            break;
+        }
+        try {
+            communicator.transmitAppData(new byte[] { (byte) dir });
+        } catch (SerialPortException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+    
+    void sendReset()
+    {
+        try {
+            communicator.sendReset();
+        } catch (SerialPortException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
     
     public Gui() 
@@ -93,9 +132,9 @@ public class Gui extends JFrame  {
                 
             }
         });
-        BoardPanel dpnl = new BoardPanel();
-        add(dpnl);
-        dpnl.setBoard(board);
+        boardPanel = new BoardPanel();
+        boardPanel.setBoard(board);
+        add(boardPanel);
         JMenuBar menubar = new JMenuBar();
         ImageIcon icon = new ImageIcon("exit.png");
         
@@ -106,13 +145,22 @@ public class Gui extends JFrame  {
 
         JMenuItem eMenuItem = new JMenuItem("Exit", icon);
         JMenuItem fileOpener = new JMenuItem("Load...", icon);
+        JMenuItem resetItem = new JMenuItem("Reset", icon);
         fileOpener.setMnemonic(KeyEvent.VK_L);
         eMenuItem.setMnemonic(KeyEvent.VK_E);
+        resetItem.setMnemonic(KeyEvent.VK_R);
         eMenuItem.setToolTipText("Exit application");
         eMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 System.exit(0);
+            }
+        });
+        
+        resetItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                sendReset();
             }
         });
         
@@ -124,12 +172,14 @@ public class Gui extends JFrame  {
                 
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
                     File file = fc.getSelectedFile();
+                    sendReset();
                     uploadFile(file);
             }
         }});
 
         file.add(eMenuItem);
         file.add(fileOpener);
+        file.add(resetItem);
 
         menubar.add(file);
 
@@ -180,7 +230,7 @@ public class Gui extends JFrame  {
         try 
         { 
             acked = 0;
-            chunkSize = 15;
+            chunkSize = 10;
             communicator.setDebugOutput(true);
             communicator.transmitCode(bytes, chunkSize);
             communicator.setEventHandler(new CommunicationEventHandler ()
@@ -188,6 +238,7 @@ public class Gui extends JFrame  {
                 public void handleEvent(CommunicationEvent e) {
                     if(e.getType() == CommunicationEvent.MESSAGE)
                     {
+                        handleFrame(e.getMessage());
                     }
                     else if(e.getType() == CommunicationEvent.RETRANSMITTED)
                         System.out.print("r");
@@ -218,14 +269,30 @@ public class Gui extends JFrame  {
     
     void handleFrame(byte[] bytes)
     {
-        System.out.println("Received a message: ");
         switch(bytes[0])
         {
-        case 1:
-            
+        case 1: // update tiles
+            for(int i = 1; i < bytes.length; i += 3)
+            {
+                setTile(bytes[i], bytes[i+1], bytes[i+2]);
+                boardPanel.setBoard(board);
+            }
+            SwingUtilities.invokeLater(new Runnable () {
+                public void run() { 
+                    boardPanel.repaint();
+                 }
+               });
             break;
-        for(byte b : bytes)
-            System.out.print((char) b);
+        case 2:
+            for(int i = 0; i < board.length; i++)
+                board[i] = bytes[1];
+            boardPanel.setBoard(board);
+            SwingUtilities.invokeLater(new Runnable () {
+                public void run() { 
+                    boardPanel.repaint();
+                 }
+               });
+            break;
         }
     }
     

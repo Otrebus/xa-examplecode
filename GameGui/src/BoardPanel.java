@@ -47,7 +47,7 @@ class BoardPanel extends JPanel
             for(int y = 0; y < Gui.WIDTH; y++)
             {
                 float newYAcc = yAcc + boxSizeH;
-                g2d.setColor(colormap[getTile(x, y)]);
+                g2d.setColor(colormap[getTile(x, y) % 10]);
                 
                 g2d.fillRect((int)xAcc, (int)yAcc, (int)(newXAcc - (int)xAcc), (int)(newYAcc - (int)yAcc));
                 yAcc = newYAcc + 1.0f;
