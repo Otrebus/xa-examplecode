@@ -161,6 +161,7 @@ public class Gui extends JFrame  {
             @Override
             public void actionPerformed(ActionEvent event) {
                 sendReset();
+                clearScreen((char) 0);
             }
         });
         
@@ -173,6 +174,7 @@ public class Gui extends JFrame  {
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
                     File file = fc.getSelectedFile();
                     sendReset();
+                    clearScreen((char) 0);
                     uploadFile(file);
             }
         }});
@@ -284,18 +286,22 @@ public class Gui extends JFrame  {
                });
             break;
         case 2:
-            for(int i = 0; i < board.length; i++)
-                board[i] = bytes[1];
-            boardPanel.setBoard(board);
-            SwingUtilities.invokeLater(new Runnable () {
-                public void run() { 
-                    boardPanel.repaint();
-                 }
-               });
+            clearScreen((char) bytes[1]);
             break;
         }
     }
     
+    private void clearScreen(char c) {
+        for(int i = 0; i < board.length; i++)
+            board[i] = c;
+        boardPanel.setBoard(board);
+        SwingUtilities.invokeLater(new Runnable () {
+            public void run() { 
+                boardPanel.repaint();
+             }
+           });
+    }
+
     private void gotAck()
     {
         acked += chunkSize;

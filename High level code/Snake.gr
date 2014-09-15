@@ -13,7 +13,7 @@ object Random
 
     long getNext()
     {
-        X = (2147483629l*X + 2147483587l) & 2147483647l;
+        X = ((2147483629l*X + 2147483587l) % 2147483647l) & 2147483647l;
         return X;
     }
 }
@@ -87,7 +87,7 @@ object Player
 object Board
 {
     char[400] board;
-    char[100] updates;
+    char[50] updates;
     int updPos;
 
     void init()
@@ -106,12 +106,22 @@ object Board
 
     char getTile(char x, char y)
     {
-        return board[(int) (y*20c + x)];
+        int yi;
+        int xi;
+        yi = (int) y;
+        xi = (int) x;
+        return board[yi*20i + xi];
     }
 
     void setTile(char x, char y, char color)
     {
-        board[(int) (y*20c + x)] = color;
+        int xi;
+        int yi;
+        xi = (int) x;
+        yi = (int) y;
+
+        board[yi*20i + xi] = color;
+        updates[0i] = 1c;
         updates[updPos] = x;
         updates[updPos + 1i] = y;
         updates[updPos + 2i] = color;
@@ -119,7 +129,7 @@ object Board
         return;
     }
 
-    void clear()
+    void clear(char color)
     {
         int i;
         i = 0i;
@@ -130,7 +140,7 @@ object Board
         }
         updPos = 2i;
         updates[0i] = 2c;
-        updates[1i] = 3c;
+        updates[1i] = color;
         return;
     }
 
@@ -165,7 +175,9 @@ object Game
         Board.init();
         Player.init(3c, 3c, 0c);
         foodcount = 0i;
-        speed = 250l;
+        speed = 150l;
+        Board.clear(0c);
+        Board.update();
         return;
     }
 
@@ -203,16 +215,16 @@ object Game
         }
         after speed msec tick();
         Board.update();
-        speed = speed - 1l;
         return;
     }
 
     void finish()
     {
-        Board.clear();
+        Board.clear(3c);
         Board.update();
         uartTransmit(8c, "YOU LOSE");
         running = false;
+        after 2l sec Main.main();
         return;
     }
 }
@@ -221,7 +233,6 @@ object Main
 {
     void main()
     {
-        Random.seed(0l);
         Game.setup();
         after 2l sec Game.tick();
         return;
