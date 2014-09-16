@@ -1,0 +1,324 @@
+extern void setUartCallback(char[], function (char) -> void);
+extern void uartTransmit(char, char[]);
+
+object Player
+{
+    char posX;
+    char posY;
+
+    void init()
+    {
+        posX = Board.getPlayerPosX();
+        posY = Board.getPlayerPosY();
+        return;
+    }
+
+    bool withinBounds(char x, char y)
+    {
+        return x >= 0c && x < 10c && y >= 0c && y < 10c;
+    }
+
+    char move(char direction)
+    {
+        char dX;
+        char dY;
+        char tile;
+        char tile2;
+        char taildir;
+        char result;
+        dX = 0c;
+        dY = 0c;
+        result = 0c;
+
+        if(direction == 0c)
+            dX = 1c;
+        else if(direction == 1c)
+            dY = -1c;
+        else if(direction == 2c)
+            dX = -1c;
+        else if(direction == 3c)
+            dY = 1c;
+        else
+            return 0c;
+
+        tile = Board.getTile(posX + dX, posY + dY);
+        if(tile == 0c || tile == 8c)
+        {
+            posX = posX + dX;
+            posY = posY + dY;
+            Board.setPlayerPos(posX, posY);
+        }
+        else if(tile == 2c || tile == 5c)
+        {
+            tile2 = Board.getTile(posX + 2c*dX, posY + 2c*dY);
+            if(tile2 == 0c || tile2 == 8c)
+            {
+                posX = posX + dX;
+                posY = posY + dY;
+
+                if(tile2 == 8c)
+                    Board.setTile(posX + dX, posY + dY, 5c);
+                else
+                    Board.setTile(posX + dX, posY + dY, 2c);
+                if(tile == 5c)
+                    Board.setTile(posX, posY, 8c);
+                else
+                    Board.setTile(posX, posY, 0c);
+                Board.setPlayerPos(posX, posY);
+                if(tile == 5c)
+                    result = result - 1c;
+                if(tile2 == 8c)
+                    result = result + 1c;
+            }
+        }
+        return result;
+    }
+}
+
+object Board
+{
+    char[100] board1 =
+        { 0c, 0c, 0c, 9c, 9c, 9c, 9c, 9c, 0c, 0c, 
+          9c, 9c, 9c, 9c, 0c, 0c, 0c, 9c, 0c, 0c, 
+          9c, 0c, 0c, 0c, 0c, 2c, 0c, 9c, 0c, 0c, 
+          9c, 0c, 0c, 0c, 9c, 2c, 9c, 9c, 9c, 0c,
+          9c, 9c, 0c, 9c, 9c, 0c, 1c, 0c, 9c, 0c,
+          9c, 0c, 8c, 8c, 9c, 0c, 0c, 0c, 9c, 0c,
+          9c, 0c, 8c, 8c, 2c, 2c, 0c, 9c, 9c, 0c,
+          9c, 9c, 0c, 0c, 9c, 0c, 0c, 9c, 0c, 0c,
+          0c, 9c, 9c, 9c, 9c, 9c, 9c, 9c, 0c, 0c,
+          0c, 0c, 0c, 0c, 0c, 0c, 0c, 0c, 0c, 0c };
+    char[100] board2;
+    char[] board;
+    char[50] updates;
+    int updPos;
+    char playerPosX;
+    char playerPosY;
+    char nGoalTiles;
+    char[] blah;
+    char[3] clr;
+    char boardNo;
+
+    void init()
+    {
+        boardNo = 1c;
+        board = board1;
+        initPlayerPos();
+        countGoalTiles();
+        return;
+    }
+
+    void loadNextBoard()
+    {
+        boardNo = boardNo + 1c;
+        if(boardNo == 2c)
+            board = board2;
+        else
+        {
+            boardNo = 1c;
+            board = board1;
+        }
+                initPlayerPos();
+        countGoalTiles();
+        return;
+    }
+
+    char getGoalTiles()
+    {
+        return nGoalTiles;
+    }
+
+    void countGoalTiles()
+    {
+        char x;
+        char y;
+        x = 0c;
+        nGoalTiles = 0c;
+        while(x < 10c)
+        {
+            y = 0c;
+            while(y < 10c)
+            {
+                if(getTile(x, y) == 8c)
+                    nGoalTiles = nGoalTiles + 1c;
+                y = y + 1c;
+            }
+            x = x + 1c;
+        }
+        return;
+    }
+
+    void initPlayerPos()
+    {
+        char x;
+        char y;
+        x = 0c;
+        while(x < 10c)
+        {
+            y = 0c;
+            while(y < 10c)
+            {
+                if(getTile(x, y) == 1c)
+                {
+                    playerPosX = x;
+                    playerPosY = y;
+                    return;
+                }
+                y = y + 1c;
+            }
+            x = x + 1c;
+        }
+        return;
+    }
+
+    char getPlayerPosX()
+    {
+        return playerPosX;
+    }
+
+    char getPlayerPosY()
+    {
+        return playerPosY;
+    }
+
+    void setPlayerPos(char xa, char ya)
+    {
+        char x;
+        char y;
+        char tile;
+        x = xa + 5c;
+        y = ya + 5c;
+        updates[updPos] = playerPosX + 5c;
+        updates[updPos + 1i] = playerPosY + 5c;
+        tile = board[((int) playerPosY)*10i + (int) playerPosX];
+        if(tile == 1c)
+        {
+            tile = 0c;
+            board[((int) playerPosY)*10i + (int) playerPosX] = 0c;
+        }
+        updates[updPos + 2i] = tile;
+
+        playerPosX = xa;
+        playerPosY = ya;
+
+        updates[updPos + 3i] = playerPosX + 5c;
+        updates[updPos + 4i] = playerPosY + 5c;
+        updates[updPos + 5i] = 1c;
+        updPos = updPos + 6i;
+        return;
+    }
+
+    char getTile(char x, char y)
+    {
+        int yi;
+        int xi;
+        yi = (int) y;
+        xi = (int) x;
+        return board[yi*10i + xi];
+    }
+
+    void setTile(char xa, char ya, char color)
+    {
+        int xi;
+        int yi;
+
+        xi = (int) xa;
+        yi = (int) ya;
+        board[yi*10i + xi] = color;
+        updates[0i] = 1c;
+        updates[updPos] = (xa + 5c);
+        updates[updPos + 1i] = (ya + 5c);
+        updates[updPos + 2i] = color;
+        updPos = updPos + 3i;
+        return;
+    }
+
+    void clear()
+    {
+        clr[0i] = 2c;
+        clr[1i] = 0c;
+        uartTransmit((char) 2c, clr);
+        return;
+    }
+
+    void update()
+    {
+        uartTransmit((char) updPos, updates);
+        updPos = 1i;
+        return;
+    }
+
+    void transmitBoard()
+    {
+        transmitPart(0c, 0c, 5c);
+        return;
+    }
+
+    void transmitPart(char x, char y, char tiles)
+    {
+        updates[0i] = 1c;
+        updPos = 1i;
+        while(x*y < 100c && tiles > 0c)
+        {
+            updates[updPos] = x + 5c;
+            updates[updPos + 1i] = y + 5c;
+            updates[updPos + 2i] = board[(int) y*10i + (int) x];
+            updPos = updPos + 3i;
+            x = x + 1c;
+            tiles = tiles - 1c;
+            if(x == 10c)
+            {
+                y = y + 1c;
+                x = 0c;
+            }
+        }
+        if(x*y < 100c)
+            after 30l msec transmitPart(x, y, 5c);
+        uartTransmit((char) updPos, updates);
+        return;
+    }
+}
+
+object Game
+{
+    char[20] input;
+    char blocksPlaced = 0c;
+
+    void handleInput(char length)
+    {
+        if(length > 1c)
+            return;
+        blocksPlaced = blocksPlaced + Player.move(input[0i]);
+        Board.update();
+        if(blocksPlaced == Board.getGoalTiles())
+            finish();
+        return;
+    }
+
+    void setup()
+    {
+        Board.init();
+        Player.init();
+        Board.transmitBoard();
+        setUartCallback(input, Game.handleInput);
+        return;
+    }
+
+    void finish()
+    {
+        Board.clear();
+        Board.loadNextBoard();
+        Player.init();
+        Board.transmitBoard();
+        return;
+    }
+}
+
+object Main
+{
+    void main()
+    {
+        Game.setup();
+        return;
+    }
+}

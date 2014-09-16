@@ -10,7 +10,7 @@ import javax.swing.JPanel;
 class BoardPanel extends JPanel 
 {
     int[] board = new int[Gui.WIDTH*Gui.WIDTH];
-    Color[] colormap = { Color.BLACK, Color.GREEN, Color.BLUE, Color.RED, Color.YELLOW, Color.MAGENTA, Color.CYAN, Color.ORANGE, Color.PINK, Color.WHITE, Color.LIGHT_GRAY };
+    Color[] colormap = { Color.BLACK, Color.GREEN, Color.BLUE, Color.RED, Color.YELLOW, Color.MAGENTA, Color.CYAN, Color.PINK, Color.WHITE, Color.LIGHT_GRAY };
     
     public void setBoard(int[] board)
     {
